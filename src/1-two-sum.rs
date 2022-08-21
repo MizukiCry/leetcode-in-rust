@@ -10,6 +10,6 @@ impl Solution {
             }
             map.insert(value, index as i32);
         }
-        return vec![];
+        vec![];
     }
 }
