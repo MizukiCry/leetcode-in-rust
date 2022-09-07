@@ -1,4 +1,4 @@
-use std::{collections::HashMap, cell::Cell};
+use std::{collections::HashMap, cell::RefCell, rc::Rc};
 
 impl Solution {
     pub fn find_substring(s: String, words: Vec<String>) -> Vec<i32> {
@@ -8,7 +8,7 @@ impl Solution {
         let s = s.as_bytes();
         let mut s_hash: Vec<i64> = Vec::with_capacity(s.len());
         for i in 0..s.len() {
-            s_hash[i] = (s[i] as i64 * HASH_BASE + if i == 0 { 0 } else { s[i - 1] as i64 }) % HASH_MOD;
+            s_hash.push((s[i] as i64 + if i == 0 { 0 } else { s_hash[i - 1] as i64 } * HASH_BASE) % HASH_MOD);
         }
 
         let word_len = words.first().unwrap().len();
@@ -27,15 +27,16 @@ impl Solution {
             hash_pow = hash_pow * HASH_BASE % HASH_MOD;
         }
 
-        let mut unmatch_num = Cell::new(words_hash.len());
+        let unmatch_num = Rc::new(RefCell::new(words_hash.len()));
         let mut modify = |hash_val: i64, num: i32| {
+            let t = unmatch_num.clone();
             if let Some(i) = words_hash.get_mut(&hash_val) {
                 if *i == 0 {
-                    *unmatch_num.get_mut() += 1;
+                    *t.borrow_mut() += 1;
                 }
                 *i += num;
                 if *i == 0 {
-                    *unmatch_num.get_mut() -= 1;
+                    *t.borrow_mut() -= 1;
                 }
             }
         };
@@ -48,14 +49,17 @@ impl Solution {
 
         for i in 0..word_len {
             let mut j = i;
-            while j + word_len <= s.len() {
-                modify(calc_hash(j), -1);
+            while j <= s.len() + total_len - word_len {
+                if j + word_len <= s.len() {
+                    modify(calc_hash(j), -1);
+                }
                 if j >= total_len {
                     modify(calc_hash(j - total_len), 1);
                 }
-                if unmatch_num.get() == 0 {
+                if *unmatch_num.borrow() == 0 {
                     ans.push((j - total_len + word_len) as i32);
                 }
+                j += word_len;
             }
         }
 
